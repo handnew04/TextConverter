@@ -23,53 +23,41 @@ def handle_shortcut(event):
         event.widget.event_generate(action)
         return "break"
 
+# 1번 기능: 여러 줄 -> 한 문단
 def merge_sentences_to_paragraph(text: str) -> str:
-    """
-    여러 줄로 나누어진 문장들을 하나의 문단으로 합칩니다.
-    빈 줄을 제거하고, 문장 사이에 하나의 공백을 삽입합니다.
-    """
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     paragraph = ' '.join(lines)
-    paragraph = re.sub(r"\s+", " ", paragraph)
-    return paragraph
+    return re.sub(r"\s+", " ", paragraph)
 
-import re
-
+# 2번 기능: 문단 -> 문장별 줄바꿈
 def split_paragraph_to_sentences(text: str) -> str:
-    """
-    하나의 문단을 문장 단위로 나누어 각 문장을 줄바꿈합니다.
-    ASCII 따옴표(")와 스마트 따옴표(“ ”)를 모두 인식하며,
-    따옴표 안의 여러 문장도 개별적으로 줄바꿈하되,
-    첫 문장 앞에 열림 따옴표, 마지막 문장 뒤에 닫힘 따옴표를 붙여 준 뒤,
-    문장 사이에 빈 줄을 한 줄씩 추가합니다.
-    """
-    # 스마트 따옴표를 ASCII 따옴표로 통일
-    text = text.replace('“', '"').replace('”', '"')
-    
-    # 따옴표 세그먼트 분리 (따옴표 포함)
-    segments = re.split(r'(".*?")', text, flags=re.DOTALL)
+    text = text.replace('"', "'")
+    # 스마트 큰따옴표 및 작은따옴표 통일
+    text = (text
+            .replace('“', '"').replace('”', '"')
+            .replace('‘', "'").replace('’', "'"))
+    # 큰따옴표(") 또는 작은따옴표(')로 감싼 구간 분리
+    segments = re.split(r'(".*?"|\'.*?\')', text, flags=re.DOTALL)
     sentences = []
-    
     for seg in segments:
-        if seg.startswith('"') and seg.endswith('"'):
-            inner = seg[1:-1].strip()
-            # 따옴표 안 문장 분리: 마침표, 물음표, 느낌표 뒤까지 포함
-            parts = re.findall(r'.+?[\.!?]', inner, flags=re.DOTALL)
+        if (seg.startswith('"') and seg.endswith('"')) or (seg.startswith("'") and seg.endswith("'")):
+            quote_char = seg[0]
+            inner = seg[1:-1]
+            parts = re.findall(r'.+?[\.!?](?=\s|$)|.+?$', inner, flags=re.DOTALL)
+            parts = [s.strip() for s in parts if s.strip()]
             for i, part in enumerate(parts):
-                part = part.strip()
                 if i == 0:
-                    part = '"' + part
+                    part = quote_char + part
                 if i == len(parts) - 1:
-                    part = part + '"'
+                    part = part + quote_char
                 sentences.append(part)
         else:
-            # 따옴표 밖 문장 분리
-            parts = re.findall(r'.+?[\.!?]', seg, flags=re.DOTALL)
-            for part in parts:
-                sentences.append(part.strip())
-    
-    # 각 문장 사이에 한 줄 공백을 넣어 결합
-    return '\n\n'.join(sentences)
+            parts = re.findall(r'.+?[\.!?](?=\s|$)|.+?$', seg, flags=re.DOTALL)
+            for p in parts:
+                p = p.strip()
+                if p: sentences.append(p)
+    return "\n\n".join(sentences)
+
 
 def on_merge():
     input_text = input_box.get("1.0", tk.END)
@@ -89,38 +77,14 @@ def on_split():
     output_box.delete("1.0", tk.END)
     output_box.insert(tk.END, result)
 
-
-# GUI setup
 # GUI setup
 root = tk.Tk()
 # 기본 창 크기 및 최소 크기 설정
 root.geometry("800x600")
 root.minsize(800, 600)
-# 텍스트 위젯 전용 폰트 객체 생성 및 크기 조절 UI
 text_font = tkfont.nametofont('TkTextFont').copy()
-text_font.configure(size=14)
-
-# 폰트 크기 변수 및 적용 함수
-font_size_var = tk.StringVar(master=root, value='14')
-def apply_font_size():
-    try:
-        size = int(font_size_var.get())
-        text_font.configure(size=size)
-    except ValueError:
-        pass
-
-control_frame = tk.Frame(root)
-control_frame.pack(fill=tk.X, padx=10, pady=(5, 0))
-tk.Label(control_frame, text="폰트 크기:").pack(side=tk.LEFT)
-tk.Entry(control_frame, textvariable=font_size_var, width=4).pack(side=tk.LEFT)
-tk.Button(control_frame, text="적용", command=apply_font_size).pack(side=tk.LEFT, padx=5)
-
-# 텍스트 위젯 전용 폰트 크기 조정
+text_font.configure(size=12)
 root.title("문단 변환기")
-# 창 크기 고정 (폰트 변경 시 자동 리사이즈 방지)
-root.update_idletasks()
-_current_geom = root.geometry()
-root.geometry(_current_geom)
 
 # 메뉴바에 Edit 기능 추가
 menubar = tk.Menu(root)
@@ -135,7 +99,7 @@ root.config(menu=menubar)
 
  # 입력 영역
 tk.Label(root, text="입력 텍스트:").pack(anchor='w', padx=10, pady=(10, 0))
-input_box = scrolledtext.ScrolledText(root, wrap=tk.WORD, font=text_font, height=6)
+input_box = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=6, font = text_font)
 input_box.pack(fill=tk.BOTH, expand=False, padx=10, pady=(0, 10))
 input_box.bind('<KeyPress>', handle_shortcut)
 
@@ -161,7 +125,7 @@ tk.Button(button_frame, text="나누기 (문단 → 줄)", command=on_split).pac
 # 출력 영역
 tk.Label(root, text="결과 텍스트:").pack(anchor='w', padx=10, pady=(10, 0))
 
-output_box = scrolledtext.ScrolledText(root, wrap=tk.WORD, font=text_font)
+output_box = scrolledtext.ScrolledText(root, wrap=tk.WORD, font = text_font)
 output_box.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 output_box.bind('<KeyPress>', handle_shortcut)
 
