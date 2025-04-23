@@ -1,0 +1,57 @@
+# .github/workflows/build.yml
+
+name: Build macOS and Windows Apps
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install py2app
+        run: |
+          python -m pip install --upgrade pip
+          pip install py2app
+      - name: Build macOS .app
+        run: |
+          python setup.py py2app
+      - name: Package .app as ZIP
+        run: |
+          cd dist
+          zip -r TextConverter-macos.zip TextConverter.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TextConverter-macos
+          path: dist/TextConverter-macos.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+      - name: Build Windows .exe
+        run: |
+          pyinstaller --onefile --windowed --name TextConverter main.py
+      - name: Package .exe as ZIP
+        run: |
+          cd dist
+          zip -r TextConverter-win.zip TextConverter.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TextConverter-windows
+          path: dist/TextConverter-win.zip
