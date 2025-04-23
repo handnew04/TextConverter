@@ -1,0 +1,3 @@
+([('TextConverter',
+   '/Users/handnew/Developer/TextConverter/dist/TextConverter',
+   'EXECUTABLE')],)
