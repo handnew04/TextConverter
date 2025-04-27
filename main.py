@@ -31,32 +31,39 @@ def merge_sentences_to_paragraph(text: str) -> str:
 
 # 2번 기능: 문단 -> 문장별 줄바꿈
 def split_paragraph_to_sentences(text: str) -> str:
-    text = text.replace('"', "'")
-    # 스마트 큰따옴표 및 작은따옴표 통일
-    text = (text
-            .replace('“', '"').replace('”', '"')
-            .replace('‘', "'").replace('’', "'"))
-    # 큰따옴표(") 또는 작은따옴표(')로 감싼 구간 분리
-    segments = re.split(r'(".*?"|\'.*?\')', text, flags=re.DOTALL)
-    sentences = []
-    for seg in segments:
-        if (seg.startswith('"') and seg.endswith('"')) or (seg.startswith("'") and seg.endswith("'")):
-            quote_char = seg[0]
-            inner = seg[1:-1]
-            parts = re.findall(r'.+?[\.!?](?=\s|$)|.+?$', inner, flags=re.DOTALL)
-            parts = [s.strip() for s in parts if s.strip()]
-            for i, part in enumerate(parts):
-                if i == 0:
-                    part = quote_char + part
-                if i == len(parts) - 1:
-                    part = part + quote_char
-                sentences.append(part)
-        else:
-            parts = re.findall(r'.+?[\.!?](?=\s|$)|.+?$', seg, flags=re.DOTALL)
-            for p in parts:
-                p = p.strip()
-                if p: sentences.append(p)
-    return "\n\n".join(sentences)
+    """
+    문단 → 문장별 줄바꿈
+    1) 스마트·일반 큰·작은 따옴표 통일
+    2) 마침표(.), 물음표(?), 느낌표(!) 뒤에서 문장 분리
+    3) 각 문장에 대해
+       - 큰따옴표(") → 작은따옴표(')
+       - 온점(.) 삭제
+       - 쉼표(,) 삭제
+       - 느낌표·물음표 보존
+    4) 문장 사이에 빈 줄 한 줄 추가
+    """
+    # 1) 따옴표 통일 (스마트 ↔ ASCII)
+    t = (text
+         .replace('“', '"').replace('”', '"')
+         .replace('‘', "'").replace('’', "'"))
+
+    # 2) . ? ! 뒤에서 분리 (분리 기호는 유지됨)
+    raw_sents = re.findall(r'[^.?!]+[.?!]', t, flags=re.DOTALL)
+
+    processed = []
+    for s in raw_sents:
+        s = s.strip()
+        # 3-1) 큰따옴표 → 작은따옴표
+        s = s.replace('"', "'")
+        # 3-2) 온점 삭제 (맨 끝의 . 만 없어도 되지만, 혹시 중간에 있을 경우 모두 제거)
+        s = s.replace('.', '')
+        # 3-3) 쉼표 삭제
+        s = s.replace(',', '')
+        # 3-4) 느낌표·물음표는 원래대로
+        processed.append(s)
+
+    # 4) 빈 줄 한 줄씩 추가
+    return "\n\n".join(processed)
 
 
 def on_merge():
@@ -69,13 +76,12 @@ def on_merge():
     output_box.insert(tk.END, result)
 
 def on_split():
-    input_text = input_box.get("1.0", tk.END)
-    if not input_text.strip():
+    txt = input_box.get("1.0", tk.END)
+    if not txt.strip():
         messagebox.showwarning("입력 오류", "변환할 텍스트를 입력하세요.")
         return
-    result = split_paragraph_to_sentences(input_text)
     output_box.delete("1.0", tk.END)
-    output_box.insert(tk.END, result)
+    output_box.insert(tk.END, split_paragraph_to_sentences(txt))
 
 # GUI setup
 root = tk.Tk()
