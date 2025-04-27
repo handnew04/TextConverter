@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import re
 import tkinter as tk
-from tkinter import messagebox, scrolledtext
+from tkinter import messagebox, scrolledtext,filedialog
 import tkinter.font as tkfont
 
 
@@ -83,6 +83,22 @@ def on_split():
     output_box.delete("1.0", tk.END)
     output_box.insert(tk.END, split_paragraph_to_sentences(txt))
 
+def on_save():
+    path = filedialog.asksaveasfilename(
+        defaultextension=".txt",
+        filetypes=[("Text 파일", "*.txt"), ("모든 파일", "*.*")],
+        title="결과를 저장할 파일 선택"
+    )
+    if not path:
+        return
+    content = output_box.get("1.0", tk.END)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        messagebox.showinfo("저장 완료", f"'{path}'에 저장되었습니다.")
+    except Exception as e:
+        messagebox.showerror("저장 실패", f"파일 저장 중 오류가 발생했습니다:\n{e}")
+
 # GUI setup
 root = tk.Tk()
 # 기본 창 크기 및 최소 크기 설정
@@ -127,6 +143,7 @@ button_frame = tk.Frame(root)
 button_frame.pack(pady=5)
 tk.Button(button_frame, text="합치기 (줄 → 문단)", command=on_merge).pack(side=tk.LEFT, padx=5)
 tk.Button(button_frame, text="나누기 (문단 → 줄)", command=on_split).pack(side=tk.LEFT, padx=5)
+tk.Button(button_frame, text="저장하기", command=on_save).pack(side=tk.RIGHT, padx=5)
 
 # 출력 영역
 tk.Label(root, text="결과 텍스트:").pack(anchor='w', padx=10, pady=(10, 0))
