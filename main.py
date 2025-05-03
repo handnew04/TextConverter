@@ -32,38 +32,15 @@ def merge_sentences_to_paragraph(text: str) -> str:
 # 2번 기능: 문단 -> 문장별 줄바꿈
 def split_paragraph_to_sentences(text: str) -> str:
     """
-    문단 → 문장별 줄바꿈
-    1) 스마트·일반 큰·작은 따옴표 통일
-    2) 마침표(.), 물음표(?), 느낌표(!) 뒤에서 문장 분리
-    3) 각 문장에 대해
-       - 큰따옴표(") → 작은따옴표(')
-       - 온점(.) 삭제
-       - 쉼표(,) 삭제
-       - 느낌표·물음표 보존
-    4) 문장 사이에 빈 줄 한 줄 추가
+    입력 텍스트에서 기존 줄을 그대로 유지하고,
+    각 줄 사이에 빈 줄 한 줄을 추가합니다.
     """
-    # 1) 따옴표 통일 (스마트 ↔ ASCII)
-    t = (text
-         .replace('“', '"').replace('”', '"')
-         .replace('‘', "'").replace('’', "'"))
-
-    # 2) . ? ! 뒤에서 분리 (분리 기호는 유지됨)
-    raw_sents = re.findall(r'[^.?!]+[.?!]', t, flags=re.DOTALL)
-
-    processed = []
-    for s in raw_sents:
-        s = s.strip()
-        # 3-1) 큰따옴표 → 작은따옴표
-        s = s.replace('"', "'")
-        # 3-2) 온점 삭제 (맨 끝의 . 만 없어도 되지만, 혹시 중간에 있을 경우 모두 제거)
-        s = s.replace('.', '')
-        # 3-3) 쉼표 삭제
-        s = s.replace(',', '')
-        # 3-4) 느낌표·물음표는 원래대로
-        processed.append(s)
-
-    # 4) 빈 줄 한 줄씩 추가
-    return "\n\n".join(processed)
+    # 1) 원본 텍스트를 줄 단위로 분리
+    lines = text.splitlines()
+    # 2) 빈 줄이 아닌 행만 필터링
+    lines = [line for line in lines if line.strip()]
+    # 3) 각 줄 사이에 빈 줄을 추가하여 결합
+    return "\n\n".join(lines)
 
 
 def on_merge():
@@ -98,6 +75,12 @@ def on_save():
         messagebox.showinfo("저장 완료", f"'{path}'에 저장되었습니다.")
     except Exception as e:
         messagebox.showerror("저장 실패", f"파일 저장 중 오류가 발생했습니다:\n{e}")
+
+def on_copy_result():
+    # 결과 텍스트를 클립보드에 복사
+    content = output_box.get("1.0", tk.END)
+    root.clipboard_clear()
+    root.clipboard_append(content)
 
 # GUI setup
 root = tk.Tk()
@@ -142,8 +125,8 @@ for btn in ("<Button-2>", "<Button-3>"):
 button_frame = tk.Frame(root)
 button_frame.pack(pady=5)
 tk.Button(button_frame, text="합치기 (줄 → 문단)", command=on_merge).pack(side=tk.LEFT, padx=5)
-tk.Button(button_frame, text="나누기 (문단 → 줄)", command=on_split).pack(side=tk.LEFT, padx=5)
-tk.Button(button_frame, text="저장하기", command=on_save).pack(side=tk.RIGHT, padx=5)
+tk.Button(button_frame, text="공백추가 (줄 공백추가)", command=on_split).pack(side=tk.LEFT, padx=5)
+tk.Button(button_frame, text="결과 텍스트 복사하기", command=on_copy_result).pack(side=tk.RIGHT, padx=5)
 
 # 출력 영역
 tk.Label(root, text="결과 텍스트:").pack(anchor='w', padx=10, pady=(10, 0))
